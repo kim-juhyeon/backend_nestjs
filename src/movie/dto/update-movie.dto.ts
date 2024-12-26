@@ -1,3 +1,4 @@
+import { PartialType } from '@nestjs/mapped-types';
 import {
   ArrayNotEmpty,
   Contains,
@@ -34,31 +35,6 @@ import {
   registerDecorator,
 } from 'class-validator';
 import { register } from 'module';
+import { CreateMovieDto } from './create-movie.dto';
 
-export class UpdateMovieDto {
-  @IsNotEmpty()
-  @IsString()
-  @IsOptional()
-  title?: string;
-
-  @IsArray()
-  @ArrayNotEmpty()
-  @IsNumber(
-    {},
-    {
-      each: true,
-    },
-  )
-  @IsOptional()
-  genreIds?: number[];
-
-  @IsNotEmpty()
-  @IsOptional()
-  @IsString()
-  detail?: string;
-
-  @IsNotEmpty()
-  @IsOptional()
-  @IsNumber()
-  directorId?: number;
-}
+export class UpdateMovieDto extends PartialType(CreateMovieDto) {}
