@@ -69,7 +69,7 @@ export class MovieService {
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
-
+    
     try {
       const director = await qr.manager.findOne(Director, {
         where: {
@@ -99,13 +99,14 @@ export class MovieService {
         genres,
       });
       await qr.commitTransaction();
-      return movie;
+        return movie;
     } catch (e) {
       await qr.rollbackTransaction();
       throw e;
     } finally {
       await qr.release();
     }
+    
   }
 
   async update(id: number, updateMovieDto: UpdateMovieDto) {
