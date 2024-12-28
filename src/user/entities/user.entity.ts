@@ -25,11 +25,6 @@ export class User extends BaseTable {
   password: string;
 
   @Column({
-    nullable: true,
-  })
-  nickname: string;
-
-  @Column({
     enum: Role,
     default: Role.user, //기본 가입시 일반유저
   })
