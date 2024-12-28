@@ -32,32 +32,40 @@ export class AuthService {
       throw new BadRequestException('토큰 포맷이 잘 못 되었습니다.');
     }
 
-    const [email, password] = tokenSplit;
+    const [email, password, nickname] = tokenSplit;
 
     return {
       email,
       password,
+      nickname,
     };
   }
-  async register(rawToken: string) {
-    const { email, password } = this.parseBasicToken(rawToken);
+  async register(registerData: {
+    email: string;
+    password: string;
+    nickname: string;
+  }) {
+    const { email, password, nickname } = registerData;
 
     const user = await this.userRepository.findOne({
       where: {
         email,
       },
     });
+
     if (user) {
       throw new BadRequestException('이미 가입한 이메일 입니다!');
     }
+
     const hash = await bcrypt.hash(
       password,
       this.configService.get<number>('HASH_ROUNDS'),
-    ); //10번에 해당하는 복잡도
+    );
 
     await this.userRepository.save({
       email,
       password: hash,
+      nickname,
     });
 
     return this.userRepository.findOne({
@@ -66,8 +74,7 @@ export class AuthService {
       },
     });
   }
-  async login(rawToken: string) {
-    const { email, password } = this.parseBasicToken(rawToken);
+  async authenticate(email: string, password: string) {
     const user = await this.userRepository.findOne({
       where: {
         email,
@@ -81,36 +88,37 @@ export class AuthService {
     if (!passOk) {
       throw new BadRequestException('잘못된');
     }
+    return user;
+  }
 
+  async issueToken(user: User, isRefreshToken: boolean) {
     const refreshTokenSecret = this.configService.get<string>(
       'REFRESH_TOKEN_SECRET',
     );
     const accessTokenSecret = this.configService.get<string>(
       'ACCESS_TOKEN_SECRET',
     );
+    return this.jwtService.signAsync(
+      {
+        sub: user.id,
+        role: user.role,
+        type: isRefreshToken ? 'refresh' : 'access',
+      },
+      {
+        secret: isRefreshToken ? refreshTokenSecret : accessTokenSecret,
+        expiresIn: isRefreshToken ? '24h' : 300,
+      },
+    );
+  }
+
+  async login(loginData: { email: string; password: string }) {
+    const { email, password } = loginData;
+
+    const user = await this.authenticate(email, password);
+
     return {
-      refreshToken: await this.jwtService.signAsync(
-        {
-          sub: user.id,
-          role: user.role,
-          type: 'refrsh',
-        },
-        {
-          secret: refreshTokenSecret,
-          expiresIn: '24h',
-        },
-      ),
-      accessToken: await this.jwtService.signAsync(
-        {
-          sub: user.id,
-          role: user.role,
-          type: 'access',
-        },
-        {
-          secret: accessTokenSecret,
-          expiresIn: 300,
-        },
-      ),
+      refreshToken: await this.issueToken(user, true),
+      accessToken: await this.issueToken(user, false),
     };
   }
 }
